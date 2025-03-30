@@ -80,7 +80,9 @@ end
 
 local function get_closest_test()
   local stop_row = vim.api.nvim_win_get_cursor(0)[1]
-  local ft = vim.api.nvim_buf_get_option(0, "filetype")
+  local ft = vim.api.nvim_get_option_value("filetype", {
+    buf = 1,
+  })
   assert(ft == "go", "can only find test in go files, not " .. ft)
   local parser = vim.treesitter.get_parser(0)
   local root = (parser:parse()[1]):root()

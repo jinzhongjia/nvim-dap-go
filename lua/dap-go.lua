@@ -87,7 +87,6 @@ local function setup_delve_adapter(dap, config)
   }
 
   dap.adapters.go = function(callback, client_config)
-    print(vim.inspect(client_config))
     if client_config.port == nil then
       callback(delve_config)
       return

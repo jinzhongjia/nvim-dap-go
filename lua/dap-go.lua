@@ -57,6 +57,17 @@ local function filtered_pick_process()
   return require("dap.utils").pick_process(opts)
 end
 
+local function filtered_pick_file()
+  local opts = {
+    executables = false,
+    filter = function(path)
+      -- 检查文件扩展名是否为.go
+      return path:match("%.go$") ~= nil
+    end,
+  }
+  return require("dap.utils").pick_file(opts)
+end
+
 local function setup_delve_adapter(dap, config)
   local args = { "dap", "-l", "127.0.0.1:" .. config.delve.port }
   vim.list_extend(args, config.delve.args)
@@ -76,6 +87,7 @@ local function setup_delve_adapter(dap, config)
   }
 
   dap.adapters.go = function(callback, client_config)
+    print(vim.inspect(client_config))
     if client_config.port == nil then
       callback(delve_config)
       return
@@ -98,30 +110,82 @@ local function setup_go_configuration(dap, configs)
   local common_debug_configs = {
     {
       type = "go",
-      name = "Debug",
+      name = "Debug (Current File)",
       request = "launch",
       program = "${file}",
+      mode = "debug",
       buildFlags = configs.delve.build_flags,
       outputMode = configs.delve.output_mode,
     },
     {
       type = "go",
-      name = "Debug (Arguments)",
+      name = "Debug (Current File & Arguments)",
       request = "launch",
       program = "${file}",
+      mode = "debug",
       args = get_arguments,
       buildFlags = configs.delve.build_flags,
       outputMode = configs.delve.output_mode,
     },
     {
       type = "go",
-      name = "Debug (Arguments & Build Flags)",
+      name = "Debug (Current File & Arguments & Build Flags)",
       request = "launch",
       program = "${file}",
+      mode = "debug",
       args = get_arguments,
       buildFlags = get_build_flags,
       outputMode = configs.delve.output_mode,
     },
+    {
+      type = "go",
+      name = "Debug (Select File)",
+      request = "launch",
+      mode = "debug",
+      program = filtered_pick_file,
+      buildFlags = configs.delve.build_flags,
+      outputMode = configs.delve.output_mode,
+    },
+    {
+      type = "go",
+      name = "Debug (Select File & Arguments)",
+      request = "launch",
+      mode = "debug",
+      program = filtered_pick_file,
+      args = get_arguments,
+      buildFlags = configs.delve.build_flags,
+      outputMode = configs.delve.output_mode,
+    },
+    {
+      type = "go",
+      name = "Debug (Select File & Arguments & Build Flags)",
+      request = "launch",
+      mode = "debug",
+      program = filtered_pick_file,
+      args = get_arguments,
+      buildFlags = get_build_flags,
+      outputMode = configs.delve.output_mode,
+    },
+    {
+      type = "go",
+      name = "Debug (Select Binary)",
+      request = "launch",
+      mode = "exec",
+      program = "${command:pickFile}",
+      buildFlags = configs.delve.build_flags,
+      outputMode = configs.delve.output_mode,
+    },
+    {
+      type = "go",
+      name = "Debug (Select Binary & Arguments)",
+      request = "launch",
+      mode = "exec",
+      program = "${command:pickFile}",
+      args = get_arguments,
+      buildFlags = configs.delve.build_flags,
+      outputMode = configs.delve.output_mode,
+    },
+
     {
       type = "go",
       name = "Debug Package",

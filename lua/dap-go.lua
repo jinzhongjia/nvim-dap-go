@@ -22,6 +22,7 @@ local default_config = {
   tests = {
     verbose = false,
   },
+  filter_main_entrance = true,
 }
 
 local internal_global_config = {}
@@ -57,12 +58,128 @@ local function filtered_pick_process()
   return require("dap.utils").pick_process(opts)
 end
 
+local function check_go_main_entrypoint(file_path)
+  local uv = vim.loop
+
+  -- Open file
+  local fd, err = uv.fs_open(file_path, "r", 438)
+  if not fd then
+    return false
+  end
+
+  -- Read the entire file content
+  local stat = uv.fs_fstat(fd)
+  local content = uv.fs_read(fd, stat.size, 0)
+
+  -- Close file
+  uv.fs_close(fd)
+
+  -- Variables to track our checks
+  local has_package_main = false
+  local has_main_func = false
+  local in_block_comment = false
+  local in_string = false
+
+  -- Process line by line
+  for line in (content .. "\n"):gmatch("([^\n]*)\n") do
+    -- Ignore leading whitespace
+    local trimmed_line = line:match("^%s*(.-)%s*$") or ""
+
+    -- Skip empty lines
+    if #trimmed_line == 0 then
+      goto continue
+    end
+
+    -- Process the line character by character for accurate comment and string detection
+    local i = 1
+    while i <= #trimmed_line do
+      local c = trimmed_line:sub(i, i)
+      local next_c = trimmed_line:sub(i + 1, i + 1)
+
+      -- Handle block comments
+      if in_block_comment then
+        if c == "*" and next_c == "/" then
+          in_block_comment = false
+          i = i + 2
+        else
+          i = i + 1
+        end
+        goto continue_char
+      end
+
+      -- Handle string literals
+      if in_string then
+        if c == '"' and trimmed_line:sub(i - 1, i - 1) ~= "\\" then
+          in_string = false
+        end
+        i = i + 1
+        goto continue_char
+      end
+
+      -- Check for start of block comment
+      if c == "/" and next_c == "*" then
+        in_block_comment = true
+        i = i + 2
+        goto continue_char
+      end
+
+      -- Check for line comment
+      if c == "/" and next_c == "/" then
+        -- Skip rest of line
+        break
+      end
+
+      -- Check for string start
+      if c == '"' then
+        in_string = true
+        i = i + 1
+        goto continue_char
+      end
+
+      -- Now check for our patterns outside comments and strings
+
+      -- Look for package main
+      if not has_package_main and trimmed_line:sub(i, i + 6) == "package" then
+        local rest = trimmed_line:sub(i + 7)
+        local package_name = rest:match("^%s+(%w+)")
+        if package_name == "main" then
+          has_package_main = true
+        elseif package_name then
+          -- Another package found, return false immediately
+          return false
+        end
+      end
+
+      -- Look for func main()
+      if not has_main_func and trimmed_line:sub(i, i + 3) == "func" then
+        local rest = trimmed_line:sub(i + 4)
+        if rest:match("^%s+main%s*%(") then
+          has_main_func = true
+        end
+      end
+
+      i = i + 1
+      ::continue_char::
+    end
+
+    ::continue::
+  end
+
+  -- Both conditions must be true for a Go main entrypoint
+  return has_package_main and has_main_func
+end
+
 local function filtered_pick_file()
   local opts = {
     executables = false,
     filter = function(path)
-      -- 检查文件扩展名是否为.go
-      return path:match("%.go$") ~= nil
+      if path:match("%.go$") == nil then
+        return false
+      end
+      if internal_global_config.filter_main_entrance then
+        return check_go_main_entrypoint(path)
+      end
+      return true
     end,
   }
   return require("dap.utils").pick_file(opts)

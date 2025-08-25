@@ -132,7 +132,7 @@ It is better to define a mapping to invoke this command. See the mapping section
 1. Register a new option to debug with build flags:
 
 ```lua
-require('dap-go').setup {
+require('dap-go').setup ({
   dap_configurations = {
     {
       type = "go",

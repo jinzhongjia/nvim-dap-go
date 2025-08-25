@@ -164,12 +164,13 @@ M.closest_test = function()
 end
 
 M.get_root_dir = function()
-  local id, client = next(vim.lsp.buf_get_clients())
+  local clients = vim.lsp.get_clients({ bufnr = 0 })
+  local id, client = next(clients)
   if id == nil then
-    error({ error_msg = "lsp client not attached" })
+    error("lsp client not attached")
   end
   if not client.config.root_dir then
-    error({ error_msg = "lsp root_dir not defined" })
+    error("lsp root_dir not defined")
   end
   return client.config.root_dir
 end

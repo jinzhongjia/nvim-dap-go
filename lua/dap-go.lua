@@ -15,7 +15,7 @@ local default_config = {
     args = {},
     build_flags = "",
     -- Automatically handle the issue on delve Windows versions < 1.24.0
-    -- where delve needs to be run in attched mode or it will fail (actually crashes).
+    -- where delve needs to be run in attached mode or it will fail (actually crashes).
     detached = vim.fn.has("win32") == 0,
     output_mode = "remote",
   },
@@ -45,7 +45,7 @@ end
 
 local function get_build_flags(config)
   return coroutine.create(function(dap_run_co)
-    local build_flags = config.build_flags
+    local build_flags = config.build_flags or ""
     vim.ui.input({ prompt = "Build Flags: " }, function(input)
       build_flags = vim.split(input or "", " ")
       coroutine.resume(dap_run_co, build_flags)
@@ -226,45 +226,7 @@ local function setup_go_configuration(dap, configs)
   local common_debug_configs = {
     {
       type = "go",
-      name = "Debug (Current File)",
-      request = "launch",
-      program = "${file}",
-      mode = "debug",
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Current File & Arguments)",
-      request = "launch",
-      program = "${file}",
-      mode = "debug",
-      args = get_arguments,
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Current File & Arguments & Build Flags)",
-      request = "launch",
-      program = "${file}",
-      mode = "debug",
-      args = get_arguments,
-      buildFlags = get_build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Select File)",
-      request = "launch",
-      mode = "debug",
-      program = filtered_pick_file,
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Select File & Arguments)",
+      name = "dao-go: Debug (Select File & Arguments)",
       request = "launch",
       mode = "debug",
       program = filtered_pick_file,
@@ -274,45 +236,7 @@ local function setup_go_configuration(dap, configs)
     },
     {
       type = "go",
-      name = "Debug (Select File & Arguments & Build Flags)",
-      request = "launch",
-      mode = "debug",
-      program = filtered_pick_file,
-      args = get_arguments,
-      buildFlags = get_build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Select Binary)",
-      request = "launch",
-      mode = "exec",
-      program = "${command:pickFile}",
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Debug (Select Binary & Arguments)",
-      request = "launch",
-      mode = "exec",
-      program = "${command:pickFile}",
-      args = get_arguments,
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-
-    {
-      type = "go",
-      name = "Debug Package",
-      request = "launch",
-      program = "${fileDirname}",
-      buildFlags = configs.delve.build_flags,
-      outputMode = configs.delve.output_mode,
-    },
-    {
-      type = "go",
-      name = "Attach",
+      name = "dao-go: Attach (Pick Process)",
       mode = "local",
       request = "attach",
       processId = filtered_pick_process,
@@ -320,7 +244,7 @@ local function setup_go_configuration(dap, configs)
     },
     {
       type = "go",
-      name = "Debug test",
+      name = "dao-go: Debug Test (Current File)",
       request = "launch",
       mode = "test",
       program = "${file}",
@@ -329,7 +253,7 @@ local function setup_go_configuration(dap, configs)
     },
     {
       type = "go",
-      name = "Debug test (go.mod)",
+      name = "dao-go: Debug Test (Package)",
       request = "launch",
       mode = "test",
       program = "./${relativeFileDirname}",
